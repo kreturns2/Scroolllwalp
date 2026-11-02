@@ -14,6 +14,7 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
@@ -34,7 +35,8 @@ public class MainActivity extends Activity {
 
     private SharedPreferences prefs;
     private ImageView preview;
-    private TextView ampLabel, pagesLabel;
+    private TextView ampLabel, pagesLabel, startLabel;
+    private SeekBar startBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,15 +115,48 @@ public class MainActivity extends Activity {
         SeekBar pages = new SeekBar(this);
         pages.setMax(7); // 2..9 pages
         pages.setProgress(prefs.getInt(ScrollWallpaperService.KEY_PAGES, 5) - 2);
-        pages.setOnSeekBarChangeListener(new SimpleSeek() {
+        root.addView(pages);
+
+        // Page d'accueil
+        startLabel = text("", 15, Color.WHITE);
+        startLabel.setPadding(0, dp(20), 0, 0);
+        root.addView(startLabel);
+        startBar = new SeekBar(this);
+        int nbPages = prefs.getInt(ScrollWallpaperService.KEY_PAGES, 5);
+        startBar.setMax(nbPages - 1);
+        startBar.setProgress(Math.min(nbPages - 1, Math.max(0, prefs.getInt(ScrollWallpaperService.KEY_START_PAGE, 0))));
+        startBar.setOnSeekBarChangeListener(new SimpleSeek() {
             @Override public void onProgressChanged(SeekBar s, int v, boolean user) {
-                prefs.edit().putInt(ScrollWallpaperService.KEY_PAGES, v + 2).apply();
+                prefs.edit().putInt(ScrollWallpaperService.KEY_START_PAGE, v).apply();
                 updateLabels();
             }
         });
-        root.addView(pages);
+        root.addView(startBar);
 
-        TextView hint = text("Astuce : en mode glissement, règle le nombre de pages comme sur ton bureau.", 13, 0xFF999999);
+        pages.setOnSeekBarChangeListener(new SimpleSeek() {
+            @Override public void onProgressChanged(SeekBar s, int v, boolean user) {
+                int n = v + 2;
+                prefs.edit().putInt(ScrollWallpaperService.KEY_PAGES, n).apply();
+                startBar.setMax(n - 1);
+                if (startBar.getProgress() > n - 1) startBar.setProgress(n - 1);
+                updateLabels();
+            }
+        });
+
+        CheckBox reset = new CheckBox(this);
+        reset.setText("Revenir sur la page d'accueil à chaque retour sur le bureau");
+        reset.setTextColor(0xFFDDDDDD);
+        reset.setChecked(prefs.getBoolean(ScrollWallpaperService.KEY_RESET_ON_RETURN, false));
+        reset.setOnCheckedChangeListener((b, checked) ->
+                prefs.edit().putBoolean(ScrollWallpaperService.KEY_RESET_ON_RETURN, checked).apply());
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rlp.topMargin = dp(8);
+        root.addView(reset, rlp);
+
+        TextView hint = text("Mode glissement : indique exactement le nombre de pages et la page d'accueil de ton bureau. "
+                + "Le fond avance d'une page par glissement et s'arrête net à la première et à la dernière page. "
+                + "Active la case ci-dessus si ton bureau revient sur la page d'accueil quand tu quittes une appli.", 13, 0xFF999999);
         hint.setPadding(0, dp(8), 0, 0);
         root.addView(hint);
 
@@ -132,6 +167,9 @@ public class MainActivity extends Activity {
     private void updateLabels() {
         ampLabel.setText("Amplitude du défilement : " + prefs.getInt(ScrollWallpaperService.KEY_AMPLITUDE, 50) + " %");
         pagesLabel.setText("Nombre de pages du bureau : " + prefs.getInt(ScrollWallpaperService.KEY_PAGES, 5));
+        if (startLabel != null) {
+            startLabel.setText("Page d'accueil : " + (prefs.getInt(ScrollWallpaperService.KEY_START_PAGE, 0) + 1));
+        }
     }
 
     private void pickImage() {
