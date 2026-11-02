@@ -17,9 +17,13 @@ jobs:
         with:
           gradle-version: 8.14.3
       - name: Compiler
-        run: gradle assembleRelease --no-daemon
-      - name: Renommer
-        run: cp app/build/outputs/apk/release/app-release.apk FondDefilant.apk
+        run: |
+          ls -R | head -50
+          F=$(find . -name settings.gradle -not -path './.git/*' | head -1)
+          if [ -z "$F" ]; then echo "ERREUR : settings.gradle introuvable, fichiers manquants"; exit 1; fi
+          cd "$(dirname "$F")"
+          gradle assembleRelease --no-daemon --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/FondDefilant.apk"
       - uses: actions/upload-artifact@v4
         with:
           name: FondDefilant-apk
