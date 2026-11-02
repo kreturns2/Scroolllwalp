@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fond Défilant</string>
+    <string name="wallpaper_desc">Ton image défile quand tu changes de page sur le bureau.</string>
+</resources>
